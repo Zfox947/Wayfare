@@ -1,0 +1,9 @@
+#!/bin/bash
+# Wayfare Bash script 
+
+#Thomas, you will need to decide if you would like the script to require 2 variables as a pass in for username and password and then check for those in the database. if it isn't in databse then theoretically you would need to ask for 
+#if they would like to create a new account or try logging in again. if they want to create a new account then ask for the other info needed. 
+#or, have them pass a single parameter asking them if they are a member then if they are then the script asks them for uname and password and if they aren't then go through a create account option
+#in order to do my part this needs to be decided so i can access the variable for uid thats created and should be held throughout the script 
+
+
