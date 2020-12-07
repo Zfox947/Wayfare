@@ -1,9 +1,49 @@
 #!/bin/bash
-# Wayfare Bash script 
+# Wayfare Bash script
 
-#Thomas, you will need to decide if you would like the script to require 2 variables as a pass in for username and password and then check for those in the database. if it isn't in databse then theoretically you would need to ask for 
-#if they would like to create a new account or try logging in again. if they want to create a new account then ask for the other info needed. 
+#Thomas, you will need to decide if you would like the script to require 2 variables as a pass in for username and password and then check for those in the database. if it isn't in databse then theoretically you would need to ask for
+#if they would like to create a new account or try logging in again. if they want to create a new account then ask for the other info needed.
 #or, have them pass a single parameter asking them if they are a member then if they are then the script asks them for uname and password and if they aren't then go through a create account option
-#in order to do my part this needs to be decided so i can access the variable for uid thats created and should be held throughout the script 
+#in order to do my part this needs to be decided so i can access the variable for uid thats created and should be held throughout the script
 
+signIn();
 
+signIn() {
+  echo -e "Welcome to Wayfare! Please enter 'login' or 'visitor' to proceed.";
+  read loginChoice
+  if [$loginChoice == "visitor"]
+  then
+    #log into database without username
+  elif [$loginChoice == "login"]
+  then
+    validateUsername();
+  else
+    echo -e "Your choice was not entered correctly.";
+    signIn();
+  fi
+}
+
+validateUsername() {
+  echo -e "Please enter your username.";
+  read username;
+  echo -e "Please enter your password.";
+  read password;
+  #then use username and password to validate in database
+  if [$loginSuccess == true]
+  then
+    #start session with the username saved, trash password
+  else
+    echo "Your credentials were unable to be verified. Type 'again' to try again or 'home' to return to the main menu.";
+    read badCredentialsRes;
+    if [$badCredentialsRes == "again"]
+    then
+      validateUsername();
+    elif [$badCredentialsRes == "home"]
+    then
+      signIn();
+    else
+      echo "Your choice was not entered correctly. You will be redirected to the main menu.";
+      signIn();
+    fi
+  fi
+}
