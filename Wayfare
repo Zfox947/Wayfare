@@ -6,44 +6,82 @@
 #or, have them pass a single parameter asking them if they are a member then if they are then the script asks them for uname and password and if they aren't then go through a create account option
 #in order to do my part this needs to be decided so i can access the variable for uid thats created and should be held throughout the script
 
-signIn();
+DB_NAME="WayfareZGTV"
+SQL_USER="zfox"
+SQL_PASS="flipburger"
+
+signIn
 
 signIn() {
-  echo -e "Welcome to Wayfare! Please enter 'login' or 'visitor' to proceed.";
+  echo -e "Welcome to Wayfare! Please enter 'register', 'login' or 'visitor' to proceed."
   read loginChoice
-  if [$loginChoice == "visitor"]
+  if [$loginChoice == "register"]
   then
-    #log into database without username
+    createUser
+  elif [$loginChoice == "visitor"]
+  then
+    #log into sql using the visitor credentials
+    sqlLogin "visitor" "visitor"
   elif [$loginChoice == "login"]
   then
-    validateUsername();
+    validateUsername
   else
-    echo -e "Your choice was not entered correctly.";
-    signIn();
+    echo -e "Your choice was not entered correctly."
+    signIn
   fi
 }
 
-validateUsername() {
-  echo -e "Please enter your username.";
-  read username;
-  echo -e "Please enter your password.";
-  read password;
-  #then use username and password to validate in database
-  if [$loginSuccess == true]
+validateNewUser() {
+  echo -e "Please enter a username for your new profile."
+  read username
+  echo -e "Please enter a password for your new profile."
+  read password
+  echo -e "Please enter your password again."
+  read password2
+  if [$password != $password2]
   then
-    #start session with the username saved, trash password
+    echo -e "Your credentials did not match. Please try again."
+    validateNewUser
   else
-    echo "Your credentials were unable to be verified. Type 'again' to try again or 'home' to return to the main menu.";
-    read badCredentialsRes;
+    createUser $username $password
+}
+
+createUser() {
+  queryCreate="INSERT into USERS (user_name, passwd, isMember) values ($1, $2, false);"
+  mysql -u $SQL_USER -p$SQL_PASS -e $queryCreate $DB_NAME
+  echo -e "Your profile was registered successfully. Proceeding to login."
+  sqlLogin $1 $2
+}
+
+validateUsername() {
+  echo -e "Please enter your username."
+  read username
+  echo -e "Please enter your password."
+  read password
+  sqlLogin $username $password
+}
+
+sqlLogin() {
+  queryLogin="SELECT user_name, passwd from USERS WHERE user_name=$1 AND passwd=$2;"
+  if [[$(mysql -u $SQL_USER -p$SQL_PASS -e $queryLogin $DB_NAME)]]
+  then
+    beginSession $1 $2
+  else
+    echo "Your credentials were unable to be verified. Type 'again' to try again or 'home' to return to the main menu."
+    read badCredentialsRes
     if [$badCredentialsRes == "again"]
     then
-      validateUsername();
+      validateUsername
     elif [$badCredentialsRes == "home"]
     then
-      signIn();
+      signIn
     else
-      echo "Your choice was not entered correctly. You will be redirected to the main menu.";
-      signIn();
+      echo "Your choice was not entered correctly. You will be redirected to the main menu."
+      signIn
     fi
   fi
+}
+
+beginSession() {
+
 }
