@@ -47,7 +47,7 @@ validateNewUser() {
 }
 
 createUser() {
-  queryCreate="INSERT into USERS (user_name, passwd, isMember) values ($1, $2, false);"
+  queryCreate="INSERT into USERS (user_name, passwd, isMember) values ($1, $2, 1);"
   mysql -u $SQL_USER -p$SQL_PASS -e $queryCreate $DB_NAME
   echo -e "Your profile was registered successfully. Proceeding to login."
   sqlLogin $1 $2
@@ -83,5 +83,45 @@ sqlLogin() {
 }
 
 beginSession() {
+	if [ "$1" = "visitor" ]; then
+		echo "Signed in as visitor. Type 'exit' to exit Wayfare or 'view' to view a post."
+		read option
+		if [ "$option" = "exit" ]; then
+			exit
+		elif [ "$option" = "view" ]; then
+			viewPost 
+		else
+			echo "invalid option."
+			beginSession
+		fi
+	else 
+		echo "Signed in as $1. Type 'exit' to exit Wayfare, 'view' to view a post, 'write' to create a new post, or 'delete' to delete a post"
+		read option
+		if [ "$option" = "exit" ]; then
+                        exit
+		elif [ "$option" = "write" ]; then
+			writePost
+		elif [ "$option" = "delete" ]; then
+			deletePost
+		elif [ "$option" = "view" ]; then
+                        viewPost
+                else
+                        echo "invalid option."
+                        beginSession
+                fi
+	fi	
+}
+
+writePost() {
+	
+}
+
+viewPost() {
 
 }
+
+deletePost() {
+
+}
+
+
