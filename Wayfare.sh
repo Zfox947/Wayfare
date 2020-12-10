@@ -87,39 +87,82 @@ sqlLogin() {
 # }
 
 beginSession() {
-	if [ "$1" = "visitor" ]; then
+	if [ "$1" == "visitor" ]; then
 		echo "Signed in as visitor. Type 'exit' to exit Wayfare or 'view' to view a post."
 		read option
-		if [ "$option" = "exit" ]; then
+		if [ "$option" == "exit" ]; then
 			exit
-		elif [ "$option" = "view" ]; then
-			viewPost
+		elif [ "$option" == "view" ]; then
+			viewPost $1
 		else
 			echo "invalid option."
-			beginSession
+			beginSession $1
 		fi
 	else
 		echo "Signed in as $1. Type 'exit' to exit Wayfare, 'view' to view a post,
     'write' to create a new post, or 'delete' to delete a post"
 		read option
-		if [ "$option" = "exit" ]; then
+		if [ "$option" == "exit" ]; then
                         exit
-		elif [ "$option" = "write" ]; then
-			writePost
-		elif [ "$option" = "delete" ]; then
-			deletePost
-		elif [ "$option" = "view" ]; then
-                        viewPost
+		elif [ "$option" == "write" ]; then
+			writePost $1
+		elif [ "$option" == "delete" ]; then
+			deletePost $1
+		elif [ "$option" == "view" ]; then
+                        viewPost $1
                 else
                         echo "invalid option."
-                        beginSession
+                        beginSession $1
                 fi
 	fi
 }
 
-# writePost() {
-#
-# }
+writePost() {
+	
+	queryUid="SELECT Uid from USERS WHERE Uname = '$1';"
+	queryUid2="SELECT Ismember from USERS WHERE Uname = '$1';"
+     	
+	read -ra Uid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryUid")
+	read -ra isMember <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryUid2")
+	
+	if [ "$isMember" == 1 ]; then 
+		
+		read -p "Please enter the location you visited (case sensitive):" -n 32 -e location
+		read -p "Please enter a comment on your visit, Press enter to be done :" -n 255 -e comment
+		
+		queryLocationid="select Locationid from LOCATION where Location = '$location';"
+		read -ra locationid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocationid")
+		
+		queryLocation="select Location from LOCATION where Location = '$location';"
+        	read -ra isLocation <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocation")
+        	
+		echo "$isLocation is location"
+		echo "$location location"
+
+		if [ "$isLocation" == "$location" ]; then
+               	        echo "location found"
+		else
+                        echo "creating location"
+                        enterLocation="INSERT into LOCATION (Location) values ('$location');"
+                        mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -e "$enterLocation"
+		fi
+
+		echo "Creating post..."
+		
+		dateUse=$(TZ=EEST date +"%F %T")
+		echo $dateUse
+		
+		queryCreate="INSERT into DATA (Uid, Date, Comment, Locationid) values ('$Uid','$dateUse','$comment','$locationid');"
+		mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -e "$queryCreate" 
+		echo "Post created at:"
+		date +'%F %T'
+		
+		#enter this into the DATA table. make sure to get datetime
+	else 
+		echo "You are not a member, Returning to options."
+		beginSession $1
+	fi
+}
 #
 # viewPost() {
 #
