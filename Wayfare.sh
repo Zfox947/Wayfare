@@ -13,11 +13,11 @@ SQL_PASS="flipburger"
 signIn() {
   echo "Welcome to Wayfare! Please enter 'register', 'login' or 'visitor' to proceed."
   read loginChoice
-  if [["$loginChoice" == "register"]]; then
-    createUser
-  elif [["$loginChoice" == "visitor"]]; then
+  if [ "$loginChoice" == "register" ]; then
+    validateNewUser
+  elif [ "$loginChoice" == "visitor" ]; then
     beginSession $loginChoice
-  elif [["$loginChoice" == "login"]]; then
+  elif [ "$loginChoice" == "login" ]; then
     validateUsername
   else
     echo "Your choice was not entered correctly."
@@ -32,7 +32,7 @@ validateNewUser() {
   read password
   echo "Please enter your password again."
   read password2
-  if [["$password" != "$password2"]]; then
+  if [ "$password" != "$password2" ]; then
     echo "Your credentials did not match. Please try again."
     validateNewUser
   else
@@ -41,8 +41,11 @@ validateNewUser() {
 }
 
 createUser() {
-  queryCreate="INSERT into USERS (user_name, passwd, isMember) values ($1, $2, 1);"
-  mysql -u $SQL_USER -p$SQL_PASS -e $queryCreate $DB_NAME
+  uid=$(uuidgen)
+  hash="$(echo -n "$2" | md5sum )"
+  echo $hash
+  queryCreate="INSERT into USERS (Uid, Uname, Passwd, Ismember) values ('$uid', '$1', '$hash', 1);"
+  mysql -u "$SQL_USER" -p"$SQL_PASS" -e "$queryCreate" "$DB_NAME"
   echo "Your profile was registered successfully. Proceeding to login."
   beginSession $1
 }
@@ -56,15 +59,16 @@ validateUsername() {
 }
 
 sqlLogin() {
-  queryLogin="SELECT user_name, passwd from USERS WHERE user_name=$1 AND passwd=$2;"
-  if [[[[$(mysql -u $SQL_USER -p$SQL_PASS -e $queryLogin $DB_NAME)]]]]; then
+  hash="$(echo -n "$2" | md5sum )"
+  queryLogin="SELECT Uname, Passwd from USERS WHERE Uname='$1' AND Passwd='$hash';"
+  if [ "$(mysql -u "$SQL_USER" -p"$SQL_PASS" -e "$queryLogin" "$DB_NAME")" ]; then
     beginSession $1
   else
     echo "Your credentials were unable to be verified. Type 'again' to try again or 'home' to return to the main menu."
     read badCredentialsRes
-    if [["$badCredentialsRes" == "again"]]; then
+    if [ "$badCredentialsRes" == "again" ]; then
       validateUsername
-    elif [["$badCredentialsRes" == "home"]]; then
+    elif [ "$badCredentialsRes" == "home" ]; then
       signIn
     else
       echo "Your choice was not entered correctly. You will be redirected to the main menu."
@@ -74,12 +78,12 @@ sqlLogin() {
 }
 
 beginSession() {
-	if [[ "$1" = "visitor" ]]; then
+	if [ "$1" = "visitor" ]; then
 		echo "Signed in as visitor. Type 'exit' to exit Wayfare or 'view' to view a post."
 		read option
-		if [[ "$option" = "exit" ]]; then
+		if [ "$option" = "exit" ]; then
 			exit
-		elif [[ "$option" = "view" ]]; then
+		elif [ "$option" = "view" ]; then
 			viewPost
 		else
 			echo "invalid option."
@@ -89,13 +93,13 @@ beginSession() {
 		echo "Signed in as $1. Type 'exit' to exit Wayfare, 'view' to view a post,
     'write' to create a new post, or 'delete' to delete a post"
 		read option
-		if [[ "$option" = "exit" ]]; then
+		if [ "$option" = "exit" ]; then
                         exit
-		elif [[ "$option" = "write" ]]; then
+		elif [ "$option" = "write" ]; then
 			writePost
-		elif [[ "$option" = "delete" ]]; then
+		elif [ "$option" = "delete" ]; then
 			deletePost
-		elif [[ "$option" = "view" ]]; then
+		elif [ "$option" = "view" ]; then
                         viewPost
                 else
                         echo "invalid option."
