@@ -43,7 +43,6 @@ validateNewUser() {
 createUser() {
   uid=$(uuidgen)
   hash="$(echo -n "$2" | md5sum )"
-  echo $hash
   queryCreate="INSERT into USERS (Uid, Uname, Passwd, Ismember) values ('$uid', '$1', '$hash', 1);"
   mysql -u "$SQL_USER" -p"$SQL_PASS" -e "$queryCreate" "$DB_NAME"
   echo "Your profile was registered successfully. Proceeding to login."
@@ -76,6 +75,16 @@ sqlLogin() {
     fi
   fi
 }
+
+#any user can change their username or password
+# editProfile() {
+#
+# }
+
+#designated admin only
+# changeMemberStatus() {
+#
+# }
 
 beginSession() {
 	if [ "$1" = "visitor" ]; then
