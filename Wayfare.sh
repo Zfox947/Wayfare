@@ -76,15 +76,76 @@ sqlLogin() {
   fi
 }
 
+#manage profile menu
+manageProfile() {
+  echo "Manage profile menu: Type 'profile' to update your profile info, 'member' to update member status of a user (admin only,) or 'main' to return to the main menu."
+  read manageProfileChoice
+  if [ "$manageProfileChoice" == 'profile' ]; then
+    editProfile $1
+  elif [ "$manageProfileChoice" == 'member' ]; then
+    if [ "$1" != "admin" ]; then
+      echo "You do not have admin privileges. Redirecting to manage profile menu..."
+      manageProfile $1
+    else
+      changeMemberStatus $1
+    fi
+  elif [ "$manageProfileChoice" == "main"]; then
+    beginSession $1
+  fi
+}
+
 #any user can change their username or password
-# editProfile() {
-#
-# }
+editProfile() {
+  echo "Type 'username' to edit your username, 'password' to edit your password, or 'main' to return to the main menu."
+  read editProfileChoice
+  if [ "$editProfileChoice" == "username" ]; then
+    echo "Please enter your new username."
+    read newUsername
+    echo "Please reenter your new username."
+    read newUsername2
+    if [ "$newUsername" != "$newUsername2" ]; then
+      echo "Your usernames did not match. Redirecting to edit profile menu."
+      editProfile $1
+    else
+      queryUsernameChange="UPDATE USERS SET Uname = '$newUsername' WHERE Uname = '$1';"
+      mysql -u "$SQL_USER" -p"$SQL_PASS" -e "$queryUsernameChange" "$DB_NAME"
+      echo "Your username has been changed."
+      beginSession $newUsername
+    fi
+  elif [ "$editProfileChoice" == "password" ]; then
+    echo "Please enter your new password."
+    read newPassword
+    echo "Please reenter your new password."
+    read newPassword2
+    if [ "$newPassword" != "$newPassword2" ]; then
+      echo "Your passwords did not match. Redirecting to edit profile menu."
+      editProfile $1
+    else
+      hash="$(echo -n "$newPassword" | md5sum )"
+      queryUsernameChange="UPDATE USERS SET Uname = '$newUsername' WHERE Uname = '$1';"
+      mysql -u "$SQL_USER" -p"$SQL_PASS" -e "$queryUsernameChange" "$DB_NAME"
+      echo "Your password has been changed."
+      beginSession $1
+    fi
+  elif [ "$editProfileChoice" == "main" ]; then
+    beginSession $1
+  fi
+}
 
 #designated admin only
-# changeMemberStatus() {
-#
-# }
+changeMemberStatus() {
+  echo "Enter the user ID for whom you would like to change member status."
+  read userID
+  echo "Type 'grant' if you would like to activate membership, or 'revoke' to remove membership."
+  read membershipChange
+  queryUsernameChange="UPDATE USERS SET Uname = '$newUsername' WHERE Uname = '$1';"
+  if [ $(mysql -u "$SQL_USER" -p"$SQL_PASS" -e "$queryUsernameChange" "$DB_NAME") ]; then
+    echo "The membership for user #$userID has been modified: $membershipChange"
+  else
+    echo "There was a problem with your input. Redirecting to main menu."
+  fi
+  beginSession $1
+}
 
 beginSession() {
 	if [ "$1" == "visitor" ]; then
@@ -108,6 +169,8 @@ beginSession() {
 			writePost $1
 		elif [ "$option" == "delete" ]; then
 			deletePost $1
+    elif [ "$option" == "manage" ]; then
+      manageProfile $1
 		elif [ "$option" == "view" ]; then
                         viewPost $1
                 else
@@ -118,21 +181,21 @@ beginSession() {
 }
 
 writePost() {
-	
+
 	queryUid="SELECT Uid from USERS WHERE Uname = '$1';"
 	queryUid2="SELECT Ismember from USERS WHERE Uname = '$1';"
-     	
+
 	read -ra Uid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryUid")
 	read -ra isMember <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryUid2")
-	
-	if [ "$isMember" == 1 ]; then 
-		
+
+	if [ "$isMember" == 1 ]; then
+
 		read -p "Please enter the location you visited (case sensitive):" -n 32 -e location
 		read -p "Please enter a comment on your visit, Press enter to be done :" -n 255 -e comment
-		
+
 		queryLocationid="select Locationid from LOCATION where Location = '$location';"
 		read -ra locationid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocationid")
-		
+
 		queryLocation="select Location from LOCATION where Location = '$location';"
         	read -ra isLocation <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocation")
 
@@ -145,16 +208,16 @@ writePost() {
 		fi
 
 		echo "Creating post..."
-		
+
 		dateUse=$(TZ=EEST date +"%F %T")
 		echo $dateUse
-		
+
 		queryCreate="INSERT into DATA (Uid, Date, Comment, Locationid) values ('$Uid','$dateUse','$comment','$locationid');"
-		mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -e "$queryCreate" 
+		mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -e "$queryCreate"
 		echo "Post created at:"
 		date +'%F %T'
 		beginSession $1
-	else 
+	else
 		echo "You are not a member, Returning to options."
 		beginSession $1
 	fi
@@ -165,7 +228,7 @@ viewPost() {
 	read answer
 	if [ "$answer" == "location" ]; then
 		read -p "Please enter the location you would like to view posts of (cap sensitive)." location
-	
+
 		#check if this is a valid location in the database
 		queryLocation="select Location from LOCATION where Location = '$location';"
         	read -ra isLocation <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocation")
@@ -199,20 +262,20 @@ viewPost() {
                 read -ra usernameq <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryNameCheck")
 
 		#check if this is a valid Username
-		
+
 		if [ "$username" == "$usernameq" ]; then
 			echo "Finding posts by user $username"
-			
+
 			queryIdCheck="SELECT Uid FROM USERS WHERE Uname = '$username';"
 			read -ra userid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryIdCheck")
-			
+
 			queryPrint="SELECT Locationid, Date, Comment FROM DATA WHERE Uid = '$userid';"
                         echo "made it here"
-			mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -NBe "$queryPrint" | while read -r lid print;	
-			do	
+			mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -NBe "$queryPrint" | while read -r lid print;
+			do
 				queryLocationid="select Location from LOCATION where Locationid = '$lid';"
 	                        read -ra location <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocationid")
-				
+
 				echo "$username posted at $location on $print"
 			done
 			beginSession $1
@@ -236,12 +299,12 @@ deletePost() {
 	read location
 	queryUid="SELECT Uid from USERS WHERE Uname = '$1'"
 	read -ra Uid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryUid")
-	
+
 	queryLocationid="select Locationid from LOCATION where Location = '$location';"
 	read -ra locationid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocationid")
-	
+
 	echo "is this the post you would like to delete?"
-	
+
 	querySelect="SELECT Date, Comment FROM DATA WHERE Uid = '$Uid' and Locationid = '$locationid';"
 	mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -NBe "$querySelect" | while read -r date comment;
 	do
@@ -255,7 +318,7 @@ deletePost() {
 		queryDelete="DELETE FROM DATA WHERE Uid = '$Uid' and Locationid = '$locationid';"
 		mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -e "$queryDelete"
 		echo "Delete Successful"
-	        beginSession $1	
+	        beginSession $1
 
 	else
 		echo "Please try again."
