@@ -135,9 +135,6 @@ writePost() {
 		
 		queryLocation="select Location from LOCATION where Location = '$location';"
         	read -ra isLocation <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocation")
-        	
-		echo "$isLocation is location"
-		echo "$location location"
 
 		if [ "$isLocation" == "$location" ]; then
                	        echo "location found"
@@ -156,20 +153,115 @@ writePost() {
 		mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -e "$queryCreate" 
 		echo "Post created at:"
 		date +'%F %T'
-		
-		#enter this into the DATA table. make sure to get datetime
+		beginSession $1
 	else 
 		echo "You are not a member, Returning to options."
 		beginSession $1
 	fi
 }
-#
-# viewPost() {
-#
-# }
-#
-# deletePost() {
-#
-# }
+
+viewPost() {
+	echo "Please enter 'location' if you would like to view post at said location or 'username' if you would like to see posts made by said user"
+	read answer
+	if [ "$answer" == "location" ]; then
+		read -p "Please enter the location you would like to view posts of (cap sensitive)." location
+	
+		#check if this is a valid location in the database
+		queryLocation="select Location from LOCATION where Location = '$location';"
+        	read -ra isLocation <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocation")
+
+        	if [ "$isLocation" == "$location" ]; then
+                	echo "location found"
+			queryLocationid="select Locationid from LOCATION where Location = '$location';"
+                	read -ra locationid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocationid")
+
+			queryPrint="SELECT Uid, Date, Comment FROM DATA WHERE Locationid = '$locationid';"
+			mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -NBe "$queryPrint" | while read -r uid print;
+			do
+				queryIdCheck="SELECT Uname FROM USERS WHERE Uid = '$uid';"
+				read -ra user <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryIdCheck")
+				echo "$user Posted on: $print"
+			done
+			beginSession $1
+
+		else
+			echo "Invalid Location. Please try again."
+			viewPost $1
+		fi
+
+
+
+	elif [ "$answer" == "username" ];then
+
+
+		read -p "Please enter the Username of the Users post you would like to view (cap sensitive)." username
+		queryNameCheck="SELECT Uname FROM USERS WHERE Uname = '$username';"
+                read -ra usernameq <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryNameCheck")
+
+		#check if this is a valid Username
+		
+		if [ "$username" == "$usernameq" ]; then
+			echo "Finding posts by user $username"
+			
+			queryIdCheck="SELECT Uid FROM USERS WHERE Uname = '$username';"
+			read -ra userid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryIdCheck")
+			
+			queryPrint="SELECT Locationid, Date, Comment FROM DATA WHERE Uid = '$userid';"
+                        echo "made it here"
+			mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -NBe "$queryPrint" | while read -r lid print;	
+			do	
+				queryLocationid="select Location from LOCATION where Locationid = '$lid';"
+	                        read -ra location <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocationid")
+				
+				echo "$username posted at $location on $print"
+			done
+			beginSession $1
+
+		else
+			echo "Unknown username. Please try again."
+			viewPost $1
+		fi
+
+
+
+	else
+		echo "Invalid input. Please try again."
+		viewPost $1
+	fi
+
+}
+
+deletePost() {
+	echo "Please enter the location your post you would like to delete is."
+	read location
+	queryUid="SELECT Uid from USERS WHERE Uname = '$1'"
+	read -ra Uid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryUid")
+	
+	queryLocationid="select Locationid from LOCATION where Location = '$location';"
+	read -ra locationid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryLocationid")
+	
+	echo "is this the post you would like to delete?"
+	
+	querySelect="SELECT Date, Comment FROM DATA WHERE Uid = '$Uid' and Locationid = '$locationid';"
+	mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -NBe "$querySelect" | while read -r date comment;
+	do
+		echo "$username  :  $location  :  $date  :  $comment"
+	done
+
+	echo "Enter 'yes' if so or anything else if you would like to select another location"
+	read answer
+
+	if [ "$answer" == "yes" ]; then
+		queryDelete="DELETE FROM DATA WHERE Uid = '$Uid' and Locationid = '$locationid';"
+		mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -e "$queryDelete"
+		echo "Delete Successful"
+	        beginSession $1	
+
+	else
+		echo "Please try again."
+		deletePost $1
+	fi
+
+}
 
 signIn
