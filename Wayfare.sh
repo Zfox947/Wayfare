@@ -210,7 +210,7 @@ writePost() {
 		echo "Creating post..."
 
 		dateUse=$(TZ=EEST date +"%F %T")
-		echo $dateUse
+		
 
 		queryCreate="INSERT into DATA (Uid, Date, Comment, Locationid) values ('$Uid','$dateUse','$comment','$locationid');"
 		mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -e "$queryCreate"
@@ -270,7 +270,7 @@ viewPost() {
 			read -ra userid <<< $(mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -se "$queryIdCheck")
 
 			queryPrint="SELECT Locationid, Date, Comment FROM DATA WHERE Uid = '$userid';"
-                        echo "made it here"
+                        
 			mysql -D"$DB_NAME" -u "$SQL_USER" -p"$SQL_PASS" -NBe "$queryPrint" | while read -r lid print;
 			do
 				queryLocationid="select Location from LOCATION where Locationid = '$lid';"
